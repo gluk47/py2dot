@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2016-08-31 11:24+0300\n"
+"POT-Creation-Date: 2016-09-01 00:36+0300\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -18,9 +18,19 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 
 #: py2dot.py:57 /home/gluk47/src/py2dot/py2dot.py:57
+#: /home/gluk47/src/py2dot/py2dot.py:65
 msgid "yes"
 msgstr "да"
 
 #: py2dot.py:58 /home/gluk47/src/py2dot/py2dot.py:58
+#: /home/gluk47/src/py2dot/py2dot.py:66 /home/gluk47/src/py2dot/py2dot.py:70
 msgid "no"
 msgstr "нет"
+
+#: /home/gluk47/src/py2dot/py2dot.py:73
+msgid "in the loop"
+msgstr "в цикле"
+
+#: /home/gluk47/src/py2dot/py2dot.py:74
+msgid "the loop ended"
+msgstr "цикл закончился"

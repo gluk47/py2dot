@@ -57,15 +57,23 @@ class Line:
 
 class Condition(Line):
     Shape = 'hexagon'
-    LabelYes = _('yes')
-    LabelNo = _('no')
-
-    ColorYes = '#00aa00'
-    ColorNo  = '#aa0000'
 
     def __init__(self, keyword, line_no, indent, label):
         Line.__init__(self, line_no, indent, label)
         self.keyword = keyword
+        if keyword == 'if':
+            self.enter_label = _('yes')
+            self.leave_label = _('no')
+            self.enter_color = '#00aa00'
+            self.leave_color = '#aa0000'
+        elif keyword == 'else':
+            self.enter_label = _('no')
+            self.enter_color = '#aa0000'
+        else:
+            self.enter_label = _('in the loop')
+            self.leave_label = _('the loop ended')
+            self.enter_color = '#00aa00'
+            self.leave_color = '#aa0000'
 
     def Continue(self, next_line, termination):
         if self.keyword == 'if':
@@ -93,23 +101,28 @@ class Condition(Line):
                 h.Terminate(terminate_to)
 
         if not hasattr(self, 'end_if'):
-            add_link(self.line_no, next_line.line_no, Condition.LabelNo, self.ColorNo)
+            add_link(self.line_no, next_line.line_no, self.leave_label, self.leave_color)
         add_node(self)
         return next_line
 
     def Enter(self, next_line):
-        if hasattr(self, 'end_if'):
-            add_link(self.line_no, next_line.line_no, Condition.LabelNo, self.ColorNo)
-        else:
-            add_link(self.line_no, next_line.line_no, Condition.LabelYes, self.ColorYes)
+        add_link(self.line_no, next_line.line_no, self.enter_label, self.enter_color)
         return next_line
 
-    def Terminate(self, next_line = None):
+    def Terminate(self, next_line = None, termination = []):
         if next_line:
-            if hasattr(self, 'end_if'):
+            if hasattr(self, 'endContinue_if'):
                 add_link(self.end_if, next_line.line_no)
             else:
-                self.Continue(next_line, [])
+                self.Continue(next_line, termination)
+        else:
+            terminate_to = self if self.keyword in ('for', 'while') else next_line
+            for h in termination:
+                if hasattr(h, 'is_break'):
+                    # TODO handle nested loops
+                    h.Terminate(next_line)
+                else:
+                    h.Terminate(terminate_to)
         add_node(self)
 
     #def Terminate(self, next_line = None):
@@ -160,7 +173,7 @@ with open(argv[1]) as srcfile:
             headers.append(last_header.Enter(this_line))
             continue
 
-while headers:
-    headers.pop().Terminate()
+if headers:
+    headers[0].Terminate(None, headers[1:])
 
 terminate_graph()
