@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 
 from sys import argv, stderr
-import re
+import re, gettext
+gettext.install('messages', './locale')
 
 def debug(x):
     print(x, file=stderr)
@@ -10,12 +11,20 @@ def debug(x):
 def start_graph():
     print('digraph {')
 
-def add_link(src_line_no, tgt_line_no, label = None):
-    label = ' [label = "%s"]' % label.replace('"', '\\"') if label else ''
-    print('  %s -> %s%s' % (src_line_no, tgt_line_no, label))
+def escape_label(label):
+    return label.replace('\\', '\\\\').replace('"', '\\"')
+
+def add_link(src_line_no, tgt_line_no, label = None, color = None):
+    mods = []
+    if label:
+        mods.append ('label = "%s"' % escape_label(label))
+    if color:
+        mods.append ('color = "%s"' % color)
+    mods = ' [%s]' % ' '.join(mods) if mods else ''
+    print('  %s -> %s%s' % (src_line_no, tgt_line_no, mods))
 
 def add_node(node):
-    print('  %s [label = "%s", shape = %s]' % (node.line_no, node.label.replace('"', '\\"'), node.Shape))
+    print('  %s [label = "%s" shape = %s]' % (node.line_no, escape_label(node.label), node.Shape))
 
 def terminate_graph():
     print('}')
@@ -32,7 +41,10 @@ class Line:
         for h in termination:
             h.Terminate(next_line)
         if type(next_line) is Line:
-            self.label += '\n' + next_line.label
+            if next_line.label == 'break':
+                self.is_break = True
+            else:
+                self.label += '\n' + next_line.label
             return self
         else:
             self.Terminate(next_line)
@@ -45,8 +57,11 @@ class Line:
 
 class Condition(Line):
     Shape = 'hexagon'
-    LabelYes = 'да'
-    LabelNo = 'нет'
+    LabelYes = _('yes')
+    LabelNo = _('no')
+
+    ColorYes = '#00aa00'
+    ColorNo  = '#aa0000'
 
     def __init__(self, keyword, line_no, indent, label):
         Line.__init__(self, line_no, indent, label)
@@ -60,22 +75,33 @@ class Condition(Line):
                 self.termination = termination
                 return self
 
+
+        terminate_to = self if self.keyword in ('for', 'while') else next_line
         if hasattr(self, 'termination'):
             for h in self.termination:
-                h.Terminate(next_line)
+                if hasattr(h, 'is_break'):
+                    # TODO handle nested loops
+                    h.Terminate(next_line)
+                else:
+                    h.Terminate(terminate_to)
+
         for h in termination:
-            h.Terminate(next_line)
+            if hasattr(h, 'is_break'):
+                # TODO handle nested loops
+                h.Terminate(next_line)
+            else:
+                h.Terminate(terminate_to)
 
         if not hasattr(self, 'end_if'):
-            add_link(self.line_no, next_line.line_no, Condition.LabelNo)
+            add_link(self.line_no, next_line.line_no, Condition.LabelNo, self.ColorNo)
         add_node(self)
         return next_line
 
     def Enter(self, next_line):
         if hasattr(self, 'end_if'):
-            add_link(self.line_no, next_line.line_no, Condition.LabelNo)
+            add_link(self.line_no, next_line.line_no, Condition.LabelNo, self.ColorNo)
         else:
-            add_link(self.line_no, next_line.line_no, Condition.LabelYes)
+            add_link(self.line_no, next_line.line_no, Condition.LabelYes, self.ColorYes)
         return next_line
 
     def Terminate(self, next_line = None):
@@ -135,7 +161,6 @@ with open(argv[1]) as srcfile:
             continue
 
 while headers:
-    last_header = headers.pop()
-    last_header.Terminate()
+    headers.pop().Terminate()
 
 terminate_graph()
